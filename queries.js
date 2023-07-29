@@ -22,7 +22,7 @@ const getAllRoles = async () => {
 
 const getAllEmployees = async () => {
   try {
-    const [rows, fields] = await db.query('SELECT * FROM employee');
+    const [rows, fields] = await db.query('SELECT * FROM employees');
     return rows;
   } catch (error) {
     console.error('Error fetching employees:', error);
@@ -40,11 +40,19 @@ const addDepartment = async (name) => {
   }
 };
 
-const addRole = async (title, salary, departmentId) => {
+const addRole = async (title, salary, departmentName) => {
   try {
+    // Fetch the department ID based on the provided department name
+    const [department] = await db.query('SELECT id FROM department WHERE name = ?', [departmentName]);
+    if (department.length === 0) {
+      console.error('Department not found:', departmentName);
+      return null;
+    }
+
+    // Insert the role using the fetched department ID
     const [result] = await db.query(
       'INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)',
-      [title, salary, departmentId]
+      [title, salary, department[0].id]
     );
     return result.insertId;
   } catch (error) {
@@ -56,8 +64,8 @@ const addRole = async (title, salary, departmentId) => {
 const addEmployee = async (firstName, lastName, roleId, managerId) => {
   try {
     const [result] = await db.query(
-      'INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)',
-      [firstName, lastName, roleId, managerId]
+      'INSERT INTO employees (name, role_id, manager_id) VALUES (?, ?, ?)',
+      [`${firstName} ${lastName}`, roleId, managerId === '' ? null : managerId]
     );
     return result.insertId;
   } catch (error) {
@@ -68,7 +76,7 @@ const addEmployee = async (firstName, lastName, roleId, managerId) => {
 
 const updateEmployeeRole = async (employeeId, newRoleId) => {
   try {
-    const [result] = await db.query('UPDATE employee SET role_id = ? WHERE id = ?', [newRoleId, employeeId]);
+    const [result] = await db.query('UPDATE employees SET role_id = ? WHERE id = ?', [newRoleId, employeeId]);
     return result.affectedRows > 0;
   } catch (error) {
     console.error('Error updating employee role:', error);
